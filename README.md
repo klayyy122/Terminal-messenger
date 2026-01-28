@@ -47,7 +47,7 @@ make
 # Example:
 ./server 1111
 ```
-# Client starting
+### Client starting
 ```bash
 ./client
 
