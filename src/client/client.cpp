@@ -2,34 +2,39 @@
 
 void Client::write()
 {
-    boost::asio::post([this]()
-    {
-        std::string msg = '[' + User_login + "]:";
-        std::string write_buffer;
-        std::getline(std::cin, write_buffer);
+    std::string write_buffer;
+    std::getline(std::cin, write_buffer);
+    
+    if (!write_buffer.empty()) {
         
-        msg += write_buffer + '\n';
+        write_buffer += '\n';
         
-        boost::system::error_code ec;
-        boost::asio::async_write(socket, boost::asio::buffer(msg),
+        boost::asio::async_write(socket, boost::asio::buffer(write_buffer),
             [this](boost::system::error_code ec, std::size_t)
             {
-                if (!ec)
-                    write();
-                else
-                {
+                if (!ec) {
+                    
+                    boost::asio::post([this]() {
+                        write();
+                    });
+                } else {
                     std::cerr << "Write error: " << ec.message() << "\n";
                     socket.close();
                 }
             });
-    });
+    } else {
+        
+        boost::asio::post([this]() {
+            write();
+        });
+    }
 }
 
 void Client::input_login(){
     do  
     {
         User_login.erase(User_login.begin(), User_login.end());
-        std::cout << "Enter login: ";
+        std::cout << "Enter login (no more than 32 symbols): ";
         std::getline(std::cin, User_login);
     } while (User_login.size() == 0 ||  User_login.size() > 32);
 }
@@ -45,7 +50,7 @@ void Client::input_password(){
 
 void Client::send_login_and_password()
 {
-    // i dont remember what it does)
+    
     send_login();
 }
 
@@ -77,7 +82,6 @@ void Client::read()
                 
                 //std::cout << "Received from server: " << response; for debug
                 
-                // Обрабатываем ответ сервера
                 if (response == "LOGIN_ALREADY_IN_USE\n") 
                 {
                     std::cout << "This login is already in use. Please choose another one.\n";
@@ -101,35 +105,44 @@ void Client::read()
                     std::cout << "Wrong password. Try again: ";
                     input_password();
                     send_password();
+                } else if(response == "HELP\n"){
+                    std::cout << "Available commands:\n";
+                    std::cout << "/room_list - List all rooms\n";
+                    std::cout << "/join_room <name> - Join a room\n";
+                    std::cout << "/create_room <name> - Create a new room\n";
+                    std::cout << "/leave_room - Leave current room\n";
+                    std::cout << "/help - Show this help\n";
+                    read();
                 }
-                else if (response == "Unknown command.\n"){
-                    std::cout << "Unknown command. Available commands:\n/room_list\n/join_room <name>\n/create_room <name>\n/leave_room\n";
+                else if (response == "Unknown command. Use /help for available commands.\n"){
+                    std::cout << "Unknown command. Use /help for available commands.\n";
                 }
                 else if (response == "REGISTRATION_SUCCESS\n" || response == "LOGIN_SUCCESS\n") 
-{
-    std::cout << "Authentication successful! You can start chatting now.\n";
-    start_chat(); 
-}
-                else 
                 {
-                    // if no one response is not acceped
-                    std::cout << response;
-                    read(); 
-                }
-            }
-            else
-            {   
-                std::cerr << "Server is not working, please try again later!\n";
-                socket.close();
-            }
-        });
+                    std::cout << "Authentication successful! You can start chatting now.\n";
+                    start_chat(); 
+                }else 
+                    {
+                        // if no one response is not acceped
+                        std::cout << response;
+                        read(); 
+                    }
+                        }
+                         else
+                            {   
+                                std::cerr << "Server is not working, please try again later!\n";
+                                socket.close();
+                            }
+                        });
 }
 void Client::start_chat()
 {
     //read the data from server and send data to the server
     read();
-    
-    write();
+
+    boost::asio::post([this]() {
+        write();
+    });
 }
 
 // sending password

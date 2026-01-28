@@ -34,7 +34,7 @@ public:
     {
         input_login();
 
-        send_login_and_password();
+        send_login();
     }
 
     ~Client()

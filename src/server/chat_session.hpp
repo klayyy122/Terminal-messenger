@@ -6,13 +6,27 @@
 #include <boost/asio.hpp>
 #include <unordered_set>
 #include <unordered_map>
-
+#include<shared_mutex>
+#include <string>
+#include "room.hpp"
 
 using boost::asio::ip::tcp;
 class ChatRoom;
 
-class ChatSession : public std::enable_shared_from_this<ChatSession>
-{
+
+class ISessionInterface {
+public:
+    virtual ~ISessionInterface() = default;
+    
+    virtual void leave_room() = 0;
+    virtual void list_rooms() = 0;
+    virtual void create_room(const std::string& name) = 0;
+    virtual void join_room(const std::string& name) = 0;
+    virtual void deliver(const std::string& message) = 0;
+    
+    virtual std::string get_login() const = 0;
+};
+class ChatSession : public std::enable_shared_from_this<ChatSession>, public ISessionInterface{
 public:
     ChatSession(tcp::socket socket, std::vector<std::shared_ptr<ChatSession>>& sessions)
         : socket_(std::move(socket)), sessions_(sessions){}
@@ -23,19 +37,23 @@ public:
     }
     ~ChatSession();
     
-
+    void join_room(const std::string& room_name) override;
+    void leave_room() override;
+    void list_rooms() override;
     void deliver(const std::string& message);
+    void create_room(const std::string& room_name) override;
 
+    std::string get_login() const override { return User_login;}
     std::string getLogin() const noexcept(true){
         return User_login;
+    }
+     std::weak_ptr<ISessionInterface> get_weak_interface() {
+        return std::static_pointer_cast<ISessionInterface>(shared_from_this());
     }
     
 private:
 
     void handle_command(const std::string& command);
-    void join_room(const std::string& room_name);
-    void leave_room();
-    void list_rooms();
     void show_help();
     void read_message();
     void write_message();
@@ -44,7 +62,7 @@ private:
     void read_password();
     void send_confirm_password();
     void read_new_password();
-    void create_room(const std::string& room_name);
+    
     void ProcessingMessage(const std::string& msg);
 
     tcp::socket socket_;
@@ -60,4 +78,6 @@ private:
     static std::unordered_map<std::string, std::shared_ptr<ChatRoom>> Rooms_list;
     static std::unordered_map<std::string, std::string> registered_users_; // login -> password
     static std::unordered_set<std::string> active_users_; // currently logged in
+    static std::shared_mutex rooms_mutex_;
+    static std::shared_mutex users_mutex_;
 };

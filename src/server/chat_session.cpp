@@ -5,7 +5,8 @@ std::unordered_set<std::string> ChatSession::logins_;
 std::unordered_map<std::string, std::shared_ptr<ChatRoom>> ChatSession::Rooms_list;
 std::unordered_map<std::string, std::string> ChatSession::registered_users_;
 std::unordered_set<std::string> ChatSession::active_users_;
-
+std::shared_mutex ChatSession::rooms_mutex_;
+std::shared_mutex ChatSession::users_mutex_;
 
 void ChatSession::deliver(const std::string& message)
 {
@@ -48,14 +49,26 @@ void ChatSession::read_message()
 
 void ChatSession::ProcessingMessage(const std::string& msg)
 {
-    if (msg[User_login.size() + 3] == '/') 
-        handle_command(msg.substr(User_login.size() + 3, msg.size() - 1));
-    else 
-    {
-        if (auto room = current_room_.lock())
-            room->Broadcast(msg, shared_from_this());
-        else
+    if(msg.empty()) return;
+
+    auto trimmed_msg = msg;
+
+    if (!trimmed_msg.empty() && trimmed_msg.back() == '\n') {
+        trimmed_msg.pop_back();
+    }
+    if (!trimmed_msg.empty() && trimmed_msg.back() == '\r') {
+        trimmed_msg.pop_back();
+    }
+
+    if(msg[0] == '/') handle_command(msg);
+    else{
+        
+        if(auto room = current_room_.lock()){
+            room->Broadcast("[" + User_login + "]" + msg, shared_from_this());
+        }else{
             deliver("You must join a room first (/join_room <name>)\n");
+        }
+        
     }
 }
 
@@ -92,11 +105,20 @@ void ChatSession::handle_command(const std::string& command)
     std::string trimmed_cmd = command;
     trimmed_cmd.erase(trimmed_cmd.find_last_not_of(" \n\r\t") + 1);
 
-    if (trimmed_cmd == "/room_list")    list_rooms();
-    else if (trimmed_cmd.find("/join_room ") == 0)  join_room(trimmed_cmd.substr(11)); 
-    else if (trimmed_cmd.find("/create_room ") == 0)    create_room(trimmed_cmd.substr(13)); 
-    else if (trimmed_cmd == "/leave_room")  leave_room();
-    else deliver("Unknown command.\n");
+    if (trimmed_cmd == "/room_list"){
+        list_rooms();
+    } else if(trimmed_cmd.find("/join_room") == 0){
+        join_room(trimmed_cmd.substr(11));
+    } else if(trimmed_cmd.find("/create_room") == 0){
+        create_room(trimmed_cmd.substr(13));
+    } else if(trimmed_cmd == "/leave_room"){
+        leave_room();
+    } else if(trimmed_cmd == "/help"){
+        deliver("HELP\n");
+
+    } else {
+        deliver("Unknown command. Use /help for available commands.\n");
+    }
 }
 
 //creating a room
@@ -113,6 +135,7 @@ void ChatSession::create_room(const std::string& room_name)
     }
 
     //check if room is already exists
+    std::unique_lock lock(rooms_mutex_);
     if (Rooms_list.find(name) != Rooms_list.end()) 
     {
         deliver("Error: Room '" + name + "' already exists\n");
@@ -122,7 +145,8 @@ void ChatSession::create_room(const std::string& room_name)
     // creating a new room
     Rooms_list[name] = std::make_shared<ChatRoom>(name);
     deliver("Room '" + name + "' created successfully\n");
-
+    
+    lock.unlock();
     //connecting to new room
     join_room(name);
 }
@@ -144,6 +168,7 @@ void ChatSession::join_room(const std::string& room_name)
         return;
     }
 
+    std::shared_lock lock(rooms_mutex_);
     auto it = Rooms_list.find(name);
     if (it == Rooms_list.end()) 
     {
@@ -152,26 +177,25 @@ void ChatSession::join_room(const std::string& room_name)
     }
 
     current_room_ = it->second;
+    lock.unlock();
+
     it->second->Connect(shared_from_this());
     deliver("Joined room: " + name + "\n");
 }
 
 void ChatSession::leave_room() 
 {
-    if (auto room = current_room_.lock()) 
-    {
+   if (auto room = current_room_.lock()) {
         room->Disconnect(shared_from_this());
         current_room_.reset();
         deliver("You left the room\n");
-    } 
-    else 
-    {
+    } else {
         deliver("You are not in any room\n");
     }
 }
 
 void ChatSession::list_rooms()
-{
+{   std::shared_lock lock(rooms_mutex_);
     std::string response = "Available rooms:\n";
 
     for (const auto& room_pair : Rooms_list) 
@@ -238,6 +262,7 @@ void ChatSession::send_confirm_password()
         {
             if (!error) {
                 //waiting client's messages
+                read_buffer_.clear();
                 read_message();
             } else {
                 socket_.close();
