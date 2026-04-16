@@ -3,7 +3,7 @@
 
 std::unordered_set<std::string> ChatSession::logins_;
 std::unordered_map<std::string, std::shared_ptr<ChatRoom>> ChatSession::Rooms_list;
-std::unordered_map<std::string, std::string> ChatSession::registered_users_;
+//std::unordered_map<std::string, std::string> ChatSession::registered_users_;
 std::unordered_set<std::string> ChatSession::active_users_;
 std::shared_mutex ChatSession::rooms_mutex_;
 std::shared_mutex ChatSession::users_mutex_;
@@ -223,29 +223,32 @@ void ChatSession::read_login() {
                 read_buffer_.clear();
                 
                 // checking the using of login
+                std::shared_lock lock(users_mutex_);
                 if (active_users_.find(received_login) != active_users_.end()) {
                     deliver("LOGIN_ALREADY_IN_USE\n");
                     read_login(); // one more chance
                     return;
                 }
-                
-                // check registration
-                auto it = registered_users_.find(received_login);
-                if (it != registered_users_.end()) {
-                    //waid password
-                    User_login = received_login;
-                    deliver("LOGIN_EXISTING\n");
-                    read_password();
-                } else {
-                    // wait password too( but new)
-                    User_login = received_login;
+                lock.unlock();
+
+                std::string stored_pass = db_.get_password(received_login);
+                this->User_login = received_login;
+                if(stored_pass.empty()){
                     deliver("LOGIN_NEW\n");
                     read_new_password();
+                } else {
+                    User_password = stored_pass;
+                    deliver("LOGIN_EXISTING\n");
+                    read_password();
                 }
+                            
+               
             } else {
                 socket_.close();
             }
         });
+
+    
 }
 
 
@@ -280,13 +283,16 @@ void ChatSession::read_new_password() {
                 read_buffer_.clear();
                 
                 // registration of new client
-                registered_users_[User_login] = new_password;
+                //registered_users_[User_login] = new_password;
+
+                if(db_.register_user(User_login, new_password)){
                 active_users_.insert(User_login);
                 logins_.insert(User_login);
                 
                 deliver("REGISTRATION_SUCCESS\n");
                 send_confirm_password();
                 std::cout << getLogin() + " connected to server\n";
+                }
             } else {
                 socket_.close();
             }
@@ -299,18 +305,19 @@ void ChatSession::read_password() {
     boost::asio::async_read_until(socket_, boost::asio::dynamic_buffer(read_buffer_), '\n',
         [this, self](boost::system::error_code ec, std::size_t length) {
             if (!ec) {
-                std::string password = read_buffer_.substr(0, length-1);
+                std::string password = read_buffer_.substr(0, length - 1);
                 read_buffer_.clear();
                 
-               // checking password
-                if (registered_users_[User_login] == password) {
-                    // password is correct
+                // Сверяем с User_password, который мы получили из БД в read_login()
+                if (User_password == password) {
+                    std::unique_lock lock(users_mutex_);
                     active_users_.insert(User_login);
                     logins_.insert(User_login);
+                    lock.unlock();
+
                     deliver("LOGIN_SUCCESS\n");
                     send_confirm_password();
                 } else {
-                    // password isn't  correct
                     deliver("WRONG_PASSWORD\n");
                     read_password(); 
                 }
@@ -319,7 +326,6 @@ void ChatSession::read_password() {
             }
         });
 }
-
 ChatSession::~ChatSession() {
     std::cout << User_login + " disconnected\n";
     if (!User_login.empty()) {

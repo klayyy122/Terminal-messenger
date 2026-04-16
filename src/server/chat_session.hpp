@@ -9,6 +9,7 @@
 #include<shared_mutex>
 #include <string>
 #include "room.hpp"
+#include"database.hpp"
 
 using boost::asio::ip::tcp;
 class ChatRoom;
@@ -28,8 +29,8 @@ public:
 };
 class ChatSession : public std::enable_shared_from_this<ChatSession>, public ISessionInterface{
 public:
-    ChatSession(tcp::socket socket, std::vector<std::shared_ptr<ChatSession>>& sessions)
-        : socket_(std::move(socket)), sessions_(sessions){}
+    ChatSession(tcp::socket socket, std::vector<std::shared_ptr<ChatSession>>& sessions, Database& db)
+        : socket_(std::move(socket)), sessions_(sessions), db_(db){}
 
     void start() 
     {
@@ -43,7 +44,7 @@ public:
     void deliver(const std::string& message);
     void create_room(const std::string& room_name) override;
 
-    std::string get_login() const override { return User_login;}
+    std::string get_login()  const override { return User_login;}
     std::string getLogin() const noexcept(true){
         return User_login;
     }
@@ -80,4 +81,6 @@ private:
     static std::unordered_set<std::string> active_users_; // currently logged in
     static std::shared_mutex rooms_mutex_;
     static std::shared_mutex users_mutex_;
+
+    Database& db_;
 };

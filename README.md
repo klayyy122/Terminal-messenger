@@ -15,8 +15,8 @@
 ## Requirements
 
 - C++ 17
-- Boost libs(1.66+)
-- CMake 4.0+
+- Boost libs(1.89.0)
+- CMake 3.20+
 
 ## Ubuntu/Debian
 ```bash
@@ -26,7 +26,7 @@ sudo apt-get install g++ cmake libboost-all-dev
 ## ArchLinux
 ```bash
 sudo pacman -Syu
-sudo pacman -S git gcc cmake boost boost-libs
+sudo pacman -S git gcc cmake boost boost-libs libpqxx
 ```
 
 ## Build
