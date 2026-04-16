@@ -1,7 +1,7 @@
 # About project
 **A multi-user room-based chat system implemented in C++ using Boost.Asio for asynchronous networking. 
 
-## ✨ Features
+##  Features
 - Room system - creating, joining, and managing chat rooms
 
 - Asynchronous server - handling multiple connections without blocking
