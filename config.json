@@ -2,5 +2,9 @@
     "server": {
         "port": 1111,
         "db_connection": "host=127.0.0.1 port=5432 dbname=chat_db user=postgres password=123"
+    },
+    "client": {
+        "port": 1111,
+        "ip": "127.0.0.1"
     }
 }
