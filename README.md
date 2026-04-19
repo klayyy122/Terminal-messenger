@@ -49,13 +49,14 @@ make
 ```
 
 ### Client starting
+
 ```bash
 ./client
 ```
 ## Session example
 
 ```bash
-# Клиент 1
+# Client 1
 Enter login: alice
 Create password: ******
 > /create_room main
@@ -63,7 +64,7 @@ Room 'main' created
 Joined room: main
 > Hello!
 
-# Клиент 2
+# Client 2
 Enter login: bob
 Enter password: ******
 > /join_room main
