@@ -21,12 +21,12 @@
 ## Ubuntu/Debian
 ```bash
 sudo apt-get update
-sudo apt-get install g++ cmake libboost-all-dev
+sudo apt-get install g++ cmake libboost-all-dev libpqxx nlohmann-json
 ```
 ## ArchLinux
 ```bash
 sudo pacman -Syu
-sudo pacman -S git gcc cmake boost boost-libs libpqxx
+sudo pacman -S git gcc cmake boost boost-libs libpqxx nlohmann-json
 ```
 
 ## Build
@@ -43,9 +43,9 @@ make
 
 ### Server starting
 ```bash
-./server <port>
+- Firstly, if you need, you can change the settings in config file.
 # Example:
-./server 1111
+./server 
 ```
 ### Client starting
 ```bash
