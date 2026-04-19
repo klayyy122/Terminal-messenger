@@ -1,57 +1,56 @@
 # About project
 **A multi-user room-based chat system implemented in C++ using Boost.Asio for asynchronous networking. 
 
-##  Features
-- Room system - creating, joining, and managing chat rooms
-
-- Asynchronous server - handling multiple connections without blocking
-
-- Group chat - real-time communication
-
-- Thread safety - secure data structures
-
-- Command interface - control via simple commands
+## Features
+- **TLS/SSL Encryption** – Secure data transfer 
+- **Room System** – Create, join, and manage persistent chat rooms.
+- **Asynchronous Architecture** – Handles multiple concurrent connections using a non-blocking I/O model.
+- **JSON Configuration** – Easy setup via `config.json` for both server and client.
+- **Command Interface** – Control your session with intuitive commands (e.g., `/join_room`, `/help`).
 
 ## Requirements
+- **C++17** or higher
+- **Boost Libraries** (1.81.0+)
+- **OpenSSL** 
+- **nlohmann-json**
+- **libpqxx** (for integration with PostgreSQL)
+- **CMake** 3.20+
 
-- C++ 17
-- Boost libs(1.89.0)
-- CMake 3.20+
+## Installation
 
-## Ubuntu/Debian
+### Ubuntu/Debian
 ```bash
 sudo apt-get update
-sudo apt-get install g++ cmake libboost-all-dev libpqxx nlohmann-json
+sudo apt-get install g++ cmake libboost-all-dev libssl-dev libpqxx-dev nlohmann-json3-dev
 ```
-## ArchLinux
+### ArchLinux
 ```bash
 sudo pacman -Syu
 sudo pacman -S git gcc cmake boost boost-libs libpqxx nlohmann-json
 ```
 
-## Build
+## Build & Run
 ```bash
-git clone https://github.com/username/Terminal-messenger.git
+git clone https://github.com/klayyy122/Terminal-messenger.git
 cd Terminal-messenger
 
 mkdir build && cd build
-
 cmake ..
 make
 ```
+
 ## Usage
 
 ### Server starting
+
 ```bash
-- Firstly, if you need, you can change the settings in config file.
-# Example:
-./server 
+# Configure server/db settings in config.json first
+./server
 ```
+
 ### Client starting
 ```bash
 ./client
-
-# Client connects by default 127.0.0.1:1111
 ```
 ## Session example
 
