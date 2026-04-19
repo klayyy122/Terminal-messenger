@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 cmake_policy(SET CMP0167 NEW)
 
 find_package(PkgConfig REQUIRED)
+find_package(nlohmann_json REQUIRED)
 pkg_check_modules(PQXX REQUIRED IMPORTED_TARGET libpqxx)
 
 
@@ -37,7 +38,8 @@ target_include_directories(server PRIVATE src/server)
 target_link_libraries(server PRIVATE 
     PkgConfig::PQXX    
     Boost::headers     
-    Threads::Threads   
+    Threads::Threads
+    nlohmann_json::nlohmann_json
 )
 
 
