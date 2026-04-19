@@ -4,13 +4,17 @@
 #include <boost/asio.hpp>
 #include <thread>
 #include <atomic>
+#include<boost/asio/ssl.hpp>
 
 using boost::asio::ip::tcp;
+using ssl_socket = boost::asio::ssl::stream<tcp::socket>;
+
 
 class Client
 {
 private:
-    tcp::socket socket;
+    boost::asio::ssl::context ssl_ctx_;
+    ssl_socket socket;
     std::string read_buffer;
     std::string User_login;
     std::string User_password;
@@ -30,15 +34,32 @@ private:
 
 public:
     Client(boost::asio::io_context& io_context, tcp::socket&& sock)
-        : socket(std::move(sock))
-    {
-        input_login();
+        : ssl_ctx_(boost::asio::ssl::context::sslv23),socket(std::move(sock), ssl_ctx_)
+    {   
+        socket.set_verify_mode(boost::asio::ssl::verify_none);
+        
+    }
 
-        send_login();
+    void start() {
+        start_handshake();
+    }
+
+    void start_handshake() {
+        socket.async_handshake(boost::asio::ssl::stream_base::client,
+        [this](const boost::system::error_code& ec){
+            if(!ec){
+                std::cout << "TLS Connection established!" << std::endl;
+                input_login();
+                send_login();
+            } else {
+                std::cerr << "Handshake failed" << ec.message() << std::endl;
+            }
+        });
     }
 
     ~Client()
     {   
-        socket.close();
+        if(socket.next_layer().is_open())
+            socket.next_layer().close();
     }
 };

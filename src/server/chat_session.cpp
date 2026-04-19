@@ -244,7 +244,8 @@ void ChatSession::read_login() {
                             
                
             } else {
-                socket_.close();
+                socket_.async_shutdown([](const boost::system::error_code& ec) {});
+                socket_.next_layer().close();
             }
         });
 
@@ -268,7 +269,8 @@ void ChatSession::send_confirm_password()
                 read_buffer_.clear();
                 read_message();
             } else {
-                socket_.close();
+                socket_.async_shutdown([](const boost::system::error_code& ec) {});
+                socket_.next_layer().close();
             }
         });
 }
@@ -294,7 +296,8 @@ void ChatSession::read_new_password() {
                 std::cout << getLogin() + " connected to server\n";
                 }
             } else {
-                socket_.close();
+                socket_.async_shutdown([](const boost::system::error_code& ec) {});
+                socket_.next_layer().close();
             }
         });
 }
@@ -322,7 +325,8 @@ void ChatSession::read_password() {
                     read_password(); 
                 }
             } else {
-                socket_.close();
+                socket_.async_shutdown([](const boost::system::error_code& ec) {});
+                socket_.next_layer().close();
             }
         });
 }
@@ -332,5 +336,7 @@ ChatSession::~ChatSession() {
         active_users_.erase(User_login);
         logins_.erase(User_login);
     }
-    socket_.close();
+    if(socket_.next_layer().is_open()){
+        socket_.next_layer().close();
+    }
 }

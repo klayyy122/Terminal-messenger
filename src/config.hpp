@@ -21,7 +21,7 @@ struct ServerConfig {
             js["server"]["db_connection"].get<std::string>()
         };
 
-        file.close();
+        
     }
 
 };
@@ -43,7 +43,7 @@ struct ClientConfig {
             js["client"]["ip"].get<std::string>()
         };
 
-        file.close();
+     
     }
 
 };

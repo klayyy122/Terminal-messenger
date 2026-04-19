@@ -4,6 +4,7 @@
 #include <memory>
 #include <deque>
 #include <boost/asio.hpp>
+#include<boost/asio/ssl.hpp>
 #include <unordered_set>
 #include <unordered_map>
 #include<shared_mutex>
@@ -12,6 +13,7 @@
 #include"database.hpp"
 
 using boost::asio::ip::tcp;
+using ssl_socket = boost::asio::ssl::stream<tcp::socket>;
 class ChatRoom;
 
 
@@ -29,14 +31,11 @@ public:
 };
 class ChatSession : public std::enable_shared_from_this<ChatSession>, public ISessionInterface{
 public:
-    ChatSession(tcp::socket socket, std::vector<std::shared_ptr<ChatSession>>& sessions, Database& db)
-        : socket_(std::move(socket)), sessions_(sessions), db_(db){}
+    ChatSession(tcp::socket socket, boost::asio::ssl::context& ctx, std::vector<std::shared_ptr<ChatSession>>& sessions, Database& db)
+        : socket_(std::move(socket),  ctx), sessions_(sessions), db_(db){}
 
-    void start() 
-    {
-        authorization();
-    }
-    ~ChatSession();
+    
+    virtual ~ChatSession();
     
     void join_room(const std::string& room_name) override;
     void leave_room() override;
@@ -52,6 +51,20 @@ public:
         return std::static_pointer_cast<ISessionInterface>(shared_from_this());
     }
     
+
+    void start(){
+        auto self(shared_from_this());
+        socket_.async_handshake(boost::asio::ssl::stream_base::server, 
+        [this, self](const boost::system::error_code& ec){
+            if(!ec){
+                authorization();
+            }
+            else{
+                std::cerr << "TLS Handshake failed" << ec.message() << std::endl;
+            }
+        });
+        }
+   
 private:
 
     void handle_command(const std::string& command);
@@ -66,7 +79,7 @@ private:
     
     void ProcessingMessage(const std::string& msg);
 
-    tcp::socket socket_;
+    ssl_socket socket_;
     std::string read_buffer_;
     std::deque<std::string> write_msgs_;
     std::vector<std::shared_ptr<ChatSession>>& sessions_;

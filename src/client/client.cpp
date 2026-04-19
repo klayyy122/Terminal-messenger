@@ -19,7 +19,8 @@ void Client::write()
                     });
                 } else {
                     std::cerr << "Write error: " << ec.message() << "\n";
-                    socket.close();
+                    socket.async_shutdown([](const boost::system::error_code& ec) {});
+                    socket.next_layer().close();
                 }
             });
     } else {
@@ -66,7 +67,8 @@ void Client::send_login()
             else
             {
                 std::cerr << "Send login error: " << ec.message() << "\n";
-                socket.close();
+                socket.async_shutdown([](const boost::system::error_code& ec) {});
+                socket.next_layer().close();
             }
         });
 }
@@ -131,7 +133,8 @@ void Client::read()
                          else
                             {   
                                 std::cerr << "Server is not working, please try again later!\n";
-                                socket.close();
+                                socket.async_shutdown([](const boost::system::error_code& ec) {});
+                                socket.next_layer().close();
                             }
                         });
 }
@@ -160,7 +163,8 @@ void Client::send_password()
             else
             {
                 std::cerr << "Write error: " << ec.message() << "\n";
-                socket.close();
+                socket.async_shutdown([](const boost::system::error_code& ec) {});
+                socket.next_layer().close();
             }
         });
 }
